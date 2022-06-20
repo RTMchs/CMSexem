@@ -1,0 +1,98 @@
+@model StandardPost
+@{
+    ViewData["Title"] = !string.IsNullOrEmpty(Model.MetaTitle) ? Model.MetaTitle : Model.Title;
+    var hasImage = Model.PrimaryImage.HasValue;
+    var archive = await WebApp.Api.Pages.GetByIdAsync(Model.BlogId);
+}
+@section head {
+    @WebApp.MetaTags(Model)
+}
+
+<header @(hasImage ? "class=has-image" : "") @(hasImage ? $"style=background-image:url({ @Url.Content(WebApp.Media.ResizeImage(Model.PrimaryImage, 1920, 400)) })" : "")>
+    <div class="dimmer"></div>
+    <div class="container text-center">
+        <h1>@Model.Title</h1>
+        <p class="post-meta">
+            <span>
+                Категория: <a href="@archive.Permalink/category/@Model.Category.Slug">@Model.Category.Title</a>
+            </span>
+            <span>
+                Тэги:
+                @foreach (var tag in Model.Tags)
+                {
+                    <a href="@archive.Permalink/tag/@tag.Slug">#@tag.Slug</a>
+                }
+            </span>
+            @if (Model.IsPublished)
+            {
+                <span>
+                    Опубликовано: @Model.Published.Value.ToShortDateString()
+                </span>
+            }
+            @if (Model.EnableComments && Model.CommentCount > 0)
+            {
+                <span>
+                    <a href="#comments">@Model.CommentCount @(Model.CommentCount == 1 ? "Комментарий" : "Комментариев(я)")</a>
+                </span>
+            }
+        </p>
+        @if (!string.IsNullOrWhiteSpace(Model.Excerpt))
+        {
+            <div class="row justify-content-center">
+                <div class="col-lg-8 lead">
+                    @Html.Raw(Model.Excerpt)
+                </div>
+            </div>
+        }
+    </div>
+</header>
+
+<main>
+    @foreach (var block in Model.Blocks)
+    {
+        <div class="block @block.CssName()">
+            <div class="container">
+                @Html.DisplayFor(m => block, block.GetType().Name)
+            </div>
+        </div>
+    }
+    @if (Model.EnableComments)
+    {
+        <div id="comments" class="container comments">
+            @if (Model.IsCommentsOpen)
+            {
+                <div class="alert alert-comment mt-2 mb-5">
+                    <form action="@Model.Permalink/comment" method="post">
+                        @Html.AntiForgeryToken()
+                        @Html.Hidden("Id", Model.Id)
+
+                        <h3 class="mb-3">Оставьте комментарий</h3>
+                        <p class="mb-4">
+                            Не переживайте, мы не будем использовать вашу почту для каких-либо рассылок и никто не сможет её увидеть. Нам нужно убедиться в том, что вы - реальный человек
+                        </p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <input name="CommentAuthor" type="text" class="form-control" placeholder="Ваше Имя">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <input name="CommentEmail" type="text" class="form-control" placeholder="Email">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <input name="CommentUrl" type="text" class="form-control" placeholder="(необязательное поле) ссылка на ваш сайт">
+                        </div>
+                        <div class="form-group">
+                            <textarea name="CommentBody" rows="6" class="form-control" placeholder="Содержание вашего комментария"></textarea>
+                        </div>
+                        <div class="form-group text-left">
+                            <button class="btn btn-success">Отправить</button>
+                        </div>
+                    </form>
+                </div>
+            }
+            @Html.DisplayFor(m => m.Comments)
+        </div>
+    }
+</main>
